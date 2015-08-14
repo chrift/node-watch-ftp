@@ -30,12 +30,6 @@ async.parallel({
 				if (err) return callback(err);
 
 				callback(null, sftp);
-
-				//sftp.readdir('foo', function (err, list) {
-				//	if (err) throw err;
-				//	console.dir(list);
-				//	conn.end();
-				//});
 			});
 		}).on('error', function (err) {
 			console.error(err);
@@ -67,6 +61,13 @@ async.parallel({
 			});
 	}
 }, function (err, results) {
+	if(err){
+		console.log('There was an error!:');
+		console.error(err);
+
+		process.exit(1);
+	}
+
 	var watcher = results.watcher,
 	    sftp    = results.sftp;
 
