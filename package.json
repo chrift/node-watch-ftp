@@ -11,6 +11,7 @@
   "dependencies": {
     "ssh2": "^0.4.10",
     "async": "^1.4.2",
-    "chokidar": "^1.0.5"
+    "chokidar": "^1.0.5",
+    "node-notifier": "^4.2.3"
   }
 }

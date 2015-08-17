@@ -4,28 +4,29 @@
 
 'use strict';
 
-var chokidar = require('chokidar');
-
-var Client = require('ssh2').Client;
-
-var async = require('async');
+var chokidar = require('chokidar'),
+    Client   = require('ssh2').Client,
+    async    = require('async'),
+    fs       = require('fs'),
+    path     = require('path'),
+    notifier = require('node-notifier');
 
 var conn = new Client();
 
 var log = console.log.bind(console);
-
-var fs   = require('fs'),
-    path = require('path');
 
 var config = require('./config');
 
 var remoteRoot = config.remoteRoot,
     localRoot  = config.localRoot;
 
+notify('Build started');
+
 async.parallel({
 	sftp: function (callback) {
 		conn.on('ready', function () {
 			console.log('Client :: ready');
+
 			conn.sftp(function (err, sftp) {
 				if (err) return callback(err);
 
@@ -45,8 +46,8 @@ async.parallel({
 		});
 	},
 	watcher: function (callback) {
-		//Ignore node_modules folders
-		var watcher = chokidar.watch(localRoot, {ignored: /.node_modules/});
+		//Ignore node_modules folders and files starting with dot or js_
+		var watcher = chokidar.watch(localRoot, {ignored: /[\/\\]\.|.node_modules/});
 
 		watcher
 			.on('error', function (error) {
@@ -61,12 +62,16 @@ async.parallel({
 			});
 	}
 }, function (err, results) {
-	if(err){
+	if (err) {
 		console.log('There was an error!:');
 		console.error(err);
 
+		notify('There was an error!');
+
 		process.exit(1);
 	}
+
+	notify('Pre-amble complete');
 
 	var watcher = results.watcher,
 	    sftp    = results.sftp;
@@ -78,12 +83,15 @@ async.parallel({
 			var remoteFilePath = getRemoteFilePath(path);
 
 			sftp.mkdir(fileDir(remoteFilePath), function (err) {
-				console.log(err);
+				//console.log(err);
 
 				sftp.fastPut(path, remoteFilePath, function (err) {
-					if (err)
+					if (err) {
 						console.log(err);
-					else console.log('File uploaded to', remoteFilePath);
+					} else {
+						console.log('File uploaded to', remoteFilePath);
+						notify('New file uploaded: ' + fileName(remoteFilePath));
+					}
 				});
 			});
 		})
@@ -92,16 +100,17 @@ async.parallel({
 
 			var remoteFilePath = getRemoteFilePath(path);
 
-			console.log(remoteFilePath, fileDir(remoteFilePath));
-
 			sftp.mkdir(fileDir(remoteFilePath), function (err) {
-				if (err)
-					console.error(err);
+				//if (err)
+				//	console.error(err);
 
 				sftp.fastPut(path, remoteFilePath, function (err) {
-					if (err)
+					if (err) {
 						console.log(err);
-					else console.log('File uploaded to', remoteFilePath);
+					} else {
+						console.log('File uploaded to', remoteFilePath);
+						notify('File changes uploaded: ' + fileName(remoteFilePath));
+					}
 				});
 			});
 		})
@@ -111,7 +120,10 @@ async.parallel({
 			sftp.unlink(getRemoteFilePath(path), function (err) {
 				if (err)
 					console.error(err);
-				else console.log('File has been uploaded to ', getRemoteFilePath(path));
+				else {
+					console.log('File has been uploaded to ', getRemoteFilePath(path));
+					notify('File removed: ' + fileName(remoteFilePath));
+				}
 			});
 		})
 		// More events.
@@ -121,7 +133,10 @@ async.parallel({
 			sftp.mkdir(fileDir(path), function (err) {
 				if (err)
 					console.error(err);
-				else console.log('Dir added at ', fileDir(path));
+				else {
+					console.log('Dir added at ', fileDir(path));
+					notify('Directory created: ' + fileName(remoteFilePath));
+				}
 			});
 		})
 		.on('unlinkDir', function (path) {
@@ -130,10 +145,16 @@ async.parallel({
 			sftp.rmdir(fileDir(path), function (err) {
 				if (err)
 					console.error(err);
+				else {
+					console.log('Dir removed at ', fileDir(path));
+					notify('Directory removed: ' + fileName(remoteFilePath));
+				}
 			});
 		})
 		.on('error', function (error) {
 			log('Error happened', error);
+
+			notify('Error!');
 		})
 });
 
@@ -145,4 +166,16 @@ function fileDir(filePath) {
 	var split = filePath.split('/');
 
 	return split.splice(0, split.length - 1).join('/');
+}
+
+function fileName(filePath) {
+	return filePath.split('/').splice(-1)[0];
+}
+
+function notify(message) {
+	notifier.notify({
+		//icon: path.join(__dirname, 'public/favicon.gif'),
+		title: 'FTP-Sync',
+		message: message
+	});
 }
