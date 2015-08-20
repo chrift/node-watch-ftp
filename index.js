@@ -33,10 +33,10 @@ async.parallel({
 				callback(null, sftp);
 			});
 		}).on('error', function (err) {
+			notify('An error has occurred');
 			console.error(err);
 
-			if (err)
-				callback(err);
+			process.exit(1);
 		}).connect({
 			host: config.ftpHost,
 			port: config.ftpPort,
@@ -87,7 +87,8 @@ async.parallel({
 
 				sftp.fastPut(path, remoteFilePath, function (err) {
 					if (err) {
-						console.log(err);
+						console.log('Error uploading new file');
+						console.error(err);
 					} else {
 						console.log('File uploaded to', remoteFilePath);
 						notify('New file uploaded: ' + fileName(remoteFilePath));
@@ -106,7 +107,8 @@ async.parallel({
 
 				sftp.fastPut(path, remoteFilePath, function (err) {
 					if (err) {
-						console.log(err);
+						console.log('Error uploading modified file');
+						console.error(err);
 					} else {
 						console.log('File uploaded to', remoteFilePath);
 						notify('File changes uploaded: ' + fileName(remoteFilePath));
@@ -118,9 +120,10 @@ async.parallel({
 			log('File', path, 'has been removed');
 
 			sftp.unlink(getRemoteFilePath(path), function (err) {
-				if (err)
+				if (err) {
+					console.log('Error removing file');
 					console.error(err);
-				else {
+				} else {
 					console.log('File has been uploaded to ', getRemoteFilePath(path));
 					notify('File removed: ' + fileName(remoteFilePath));
 				}
@@ -130,24 +133,26 @@ async.parallel({
 		.on('addDir', function (path) {
 			log('Directory', path, 'has been added');
 
-			sftp.mkdir(fileDir(path), function (err) {
-				if (err)
+			sftp.mkdir(getRemoteFilePath(path), function (err) {
+				if (err) {
+					console.log('Error adding folder');
 					console.error(err);
-				else {
-					console.log('Dir added at ', fileDir(path));
-					notify('Directory created: ' + fileName(remoteFilePath));
+				} else {
+					console.log('Dir added at ', getRemoteFilePath(path));
+					notify('Directory created: ' + fileName(path));
 				}
 			});
 		})
 		.on('unlinkDir', function (path) {
 			log('Directory', path, 'has been removed');
 
-			sftp.rmdir(fileDir(path), function (err) {
-				if (err)
+			sftp.rmdir(getRemoteFilePath(path), function (err) {
+				if (err) {
+					console.log('Error uploading folder');
 					console.error(err);
-				else {
-					console.log('Dir removed at ', fileDir(path));
-					notify('Directory removed: ' + fileName(remoteFilePath));
+				} else {
+					console.log('Dir removed at ', getRemoteFilePath(path));
+					notify('Directory removed: ' + fileName(path));
 				}
 			});
 		})
