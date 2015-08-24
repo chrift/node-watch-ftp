@@ -41,6 +41,7 @@ async.parallel({
 			host: config.ftpHost,
 			port: config.ftpPort,
 			username: config.ftpUser,
+			password: config.ftpPassword,
 			privateKey: config.ftpPrivateKey,
 			//keepaliveInterval: 30
 		});
