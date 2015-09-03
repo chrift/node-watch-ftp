@@ -120,12 +120,14 @@ async.parallel({
 		.on('unlink', function (path) {
 			log('File', path, 'has been removed');
 
-			sftp.unlink(getRemoteFilePath(path), function (err) {
+			var remoteFilePath = getRemoteFilePath(path);
+
+			sftp.unlink(remoteFilePath, function (err) {
 				if (err) {
 					console.log('Error removing file');
 					console.error(err);
 				} else {
-					console.log('File has been uploaded to ', getRemoteFilePath(path));
+					console.log('File has been removed from ', getRemoteFilePath(path));
 					notify('File removed: ' + fileName(remoteFilePath));
 				}
 			});
